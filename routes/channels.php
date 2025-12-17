@@ -6,6 +6,11 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
+// Canal privado para notificaciones de usuario
+Broadcast::channel('users.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});
+
 // Canal de presencia para proyectos (muestra usuarios conectados)
 Broadcast::channel('project.{projectId}', function ($user, $projectId) {
     // Verificar si el usuario tiene acceso al proyecto

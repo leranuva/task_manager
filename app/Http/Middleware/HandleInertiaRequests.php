@@ -47,12 +47,14 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'message' => fn () => $request->session()->get('message'),
                 'error' => fn () => $request->session()->get('error'),
+                'status' => fn () => $request->session()->get('status'),
             ],
             'pusher' => [
                 'key' => config('broadcasting.connections.pusher.key'),
                 'cluster' => config('broadcasting.connections.pusher.options.cluster'),
             ],
             'unread_notifications_count' => fn () => $request->user() ? $request->user()->unreadNotifications()->count() : 0,
+            'app_url' => config('app.url'),
         ];
     }
 }

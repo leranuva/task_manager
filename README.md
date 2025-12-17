@@ -1,118 +1,105 @@
-# Task Manager Beta
+# Task Manager Beta Avanzada
 
-> Plataforma de gestión de proyectos colaborativa en tiempo real
+## ¿Qué es?
 
-## 📚 Documentación Completa
+Task Manager es un sistema completo de gestión de proyectos y tareas desarrollado con **Laravel y Vue 3**, enfocado en la **colaboración en tiempo real** y la productividad de equipos.
 
-Para ver la documentación completa del proyecto, consulta:
-- **[Documentación Completa](./docs/PROJECT_DOCUMENTATION.md)** - Guía completa de todas las funcionalidades implementadas
+Está inspirado en herramientas como **Jira** y **ClickUp**, pero construido como una aplicación moderna, modular y escalable.
 
-## 🚀 Inicio Rápido
+---
 
-Plataforma de gestión de proyectos colaborativa en tiempo real, similar a Jira/ClickUp.
+## ¿Qué hace?
 
-## 🚀 Tecnologías
+- **Gestión de Proyectos**: Crea y administra proyectos con equipos, estados personalizados y plantillas reutilizables
+- **Kanban Board**: Visualiza y gestiona tareas con drag & drop en un tablero Kanban interactivo
+- **Colaboración en Tiempo Real**: Trabaja simultáneamente con otros usuarios, ve indicadores de escritura, seguimiento de cursores y resolución de conflictos
+- **Sistema de Comentarios**: Comenta en tareas y proyectos con soporte para archivos adjuntos y menciones
+- **Gestión de Archivos**: Adjunta archivos a tareas, proyectos y comentarios con preview de imágenes y PDFs, compresión automática y versionado
+- **Notificaciones**: Recibe notificaciones en tiempo real y por email sobre actividades importantes
+- **Dashboard y KPIs**: Visualiza métricas, gráficos y estadísticas de tus proyectos y tareas
+- **Roles y Permisos**: Sistema granular de permisos con roles globales y específicos por proyecto
+- **Dependencias de Tareas**: Define relaciones entre tareas con bloqueo automático de tareas dependientes
 
-- **Backend**: Laravel 12
-- **Frontend**: Vue 3 + Inertia.js (pendiente)
-- **WebSockets**: Laravel Reverb
-- **Base de datos**: MySQL/MariaDB
-- **Cache/Queue**: Redis
+## Demo
 
-## 📋 Requisitos
+🚧 Próximamente  
+(Screenshots y video del tablero Kanban y colaboración en tiempo real)
 
+---
+
+## ¿Cómo lo instalo?
+
+### Requisitos
 - PHP >= 8.2
 - Composer >= 2.0
 - Node.js >= 18
-- MySQL >= 8.0 (o MariaDB compatible)
+- MySQL >= 8 (o MariaDB >= 10.4)
 - Redis >= 6.0 (recomendado)
 
-## 🛠️ Instalación
+### Instalación
 
 1. **Clonar el repositorio**
-   ```bash
-   git clone <repository-url>
-   cd task_manager_beta
-   ```
-
-2. **Instalar dependencias PHP**
-   ```bash
-   composer install
-   ```
-
-3. **Instalar dependencias Node.js**
-   ```bash
-   npm install
-   ```
-
-4. **Configurar entorno**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-
-5. **Configurar base de datos**
-   - Crear base de datos `task_manager_beta` en MySQL
-   - Configurar credenciales en `.env`
-
-6. **Ejecutar migraciones**
-   ```bash
-   php artisan migrate
-   ```
-
-7. **Compilar assets**
-   ```bash
-   npm run build
-   ```
-
-## 🚀 Iniciar el proyecto
-
-### Desarrollo
-
-1. **Iniciar servidor Laravel**
-   ```bash
-   php artisan serve
-   ```
-
-2. **Iniciar servidor Reverb (WebSockets)**
-   ```bash
-   php artisan reverb:start
-   ```
-
-3. **Compilar assets en modo desarrollo**
-   ```bash
-   npm run dev
-   ```
-
-### Producción
-
 ```bash
-npm run build
-php artisan optimize
-php artisan reverb:start
+git clone https://github.com/leranuva/task_manager.git
+cd task_manager_beta
 ```
 
-## 📚 Documentación
+2. **Instalar dependencias PHP**
+```bash
+composer install
+```
 
-Toda la documentación del proyecto se encuentra en la carpeta [`docs/`](docs/):
+3. **Instalar dependencias Node**
+```bash
+npm install
+```
 
-- [`PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) - Estructura del proyecto y base de datos
-- [`ENVIRONMENT_CHECK.md`](docs/ENVIRONMENT_CHECK.md) - Verificación del entorno
-- [`REQUIREMENTS_STATUS.md`](docs/REQUIREMENTS_STATUS.md) - Estado de requisitos
-- [`create_database.sql`](docs/create_database.sql) - Script SQL para crear la base de datos
+4. **Configurar entorno**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-## 🎯 Características (MVP)
+5. **Configurar base de datos**
+```bash
+# Crear base de datos
+mysql -u root -p < database/create_database.sql
 
-- ✅ Autenticación (Laravel Breeze)
-- ✅ Estructura de base de datos
-- ✅ Modelos y relaciones
-- ⏳ Proyectos y equipos
-- ⏳ Tareas con Kanban
-- ⏳ Roles y permisos
-- ⏳ Colaboración en tiempo real
-- ⏳ Notificaciones
+# Ejecutar migraciones
+php artisan migrate
 
-## 📝 Licencia
+# Ejecutar seeders
+php artisan db:seed
+```
 
-Este proyecto es de código abierto y está disponible bajo la [licencia MIT](LICENSE).
+6. **Crear enlace simbólico de storage**
+```bash
+php artisan storage:link
+```
 
+7. **Compilar assets**
+```bash
+npm run dev
+# o para producción
+npm run build
+```
+
+8. **Iniciar servidor**
+```bash
+php artisan serve
+```
+
+9. **Iniciar queue worker** (en otra terminal)
+```bash
+php artisan queue:work
+```
+
+## ¿Por qué es especial?
+
+- **Tecnología Moderna**: Construido con Laravel 12, Vue 3, Inertia.js y Tailwind CSS para una experiencia de usuario fluida
+- **Tiempo Real**: Integración completa con Pusher para actualizaciones instantáneas, indicadores de escritura y seguimiento de cursores
+- **Colaboración Avanzada**: Resolución automática de conflictos, historial de actividad y presencia de usuarios en tiempo real
+- **Escalable**: Arquitectura modular con servicios reutilizables, políticas de autorización granulares y soporte para almacenamiento en la nube (S3)
+- **Completo**: Sistema integral que incluye gestión de proyectos, tareas, comentarios, archivos, notificaciones y análisis
+- **Seguro**: Sistema robusto de roles y permisos con control de acceso a nivel de proyecto y tarea
+- **Productivo**: Dashboard con KPIs, gráficos interactivos y métricas para tomar decisiones informadas

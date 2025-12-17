@@ -19,6 +19,10 @@
         <script>
             window.PUSHER_APP_KEY = '{{ config('broadcasting.connections.pusher.key') }}';
             window.PUSHER_APP_CLUSTER = '{{ config('broadcasting.connections.pusher.options.cluster') }}';
+            // Configurar Ziggy para usar la URL actual en lugar de la configurada
+            if (typeof window.Ziggy !== 'undefined') {
+                window.Ziggy.url = window.location.origin;
+            }
         </script>
     </head>
     <body class="font-sans antialiased">
