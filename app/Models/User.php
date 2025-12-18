@@ -25,6 +25,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_super_admin',
     ];
 
     /**
@@ -47,6 +48,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_super_admin' => 'boolean',
         ];
     }
 
@@ -85,10 +87,7 @@ class User extends Authenticatable
         return $this->hasMany(Task::class, 'created_by');
     }
 
-    public function roles(): MorphToMany
-    {
-        return $this->morphToMany(Role::class, 'roleable', 'role_user');
-    }
+    // Roles polimórficos eliminados - usar is_super_admin y roles en team_user/project_user
 
     public function comments(): HasMany
     {
@@ -103,5 +102,17 @@ class User extends Authenticatable
     public function fileAttachments(): HasMany
     {
         return $this->hasMany(FileAttachment::class, 'uploaded_by');
+    }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(Invitation::class, 'invited_by');
+    }
+
+    public function pendingInvitations(): HasMany
+    {
+        return $this->hasMany(Invitation::class, 'invited_by')
+            ->whereNull('accepted_at')
+            ->where('expires_at', '>', now());
     }
 }

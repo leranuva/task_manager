@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -23,6 +24,33 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications/preferences', [\App\Http\Controllers\NotificationPreferenceController::class, 'index'])->name('notifications.preferences');
     Route::put('/notifications/preferences', [\App\Http\Controllers\NotificationPreferenceController::class, 'update'])->name('notifications.preferences.update');
     Route::put('/notifications/preferences/{type}', [\App\Http\Controllers\NotificationPreferenceController::class, 'updateSingle'])->name('notifications.preferences.update-single');
+
+    // Super Admin Panel
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
+    });
+
+    // Users Management (Solo Super Admins)
+    // La verificación se hace en UserPolicy y UserController
+    Route::resource('users', UserController::class);
+
+    // Teams
+    Route::resource('teams', \App\Http\Controllers\TeamController::class);
+    Route::prefix('teams/{team}')->name('teams.')->group(function () {
+        Route::get('members', [\App\Http\Controllers\TeamController::class, 'members'])->name('members');
+        Route::post('members', [\App\Http\Controllers\TeamController::class, 'addMember'])->name('members.add');
+        Route::put('members/{user}', [\App\Http\Controllers\TeamController::class, 'updateMemberRole'])->name('members.update');
+        Route::delete('members/{user}', [\App\Http\Controllers\TeamController::class, 'removeMember'])->name('members.remove');
+    });
+
+    // Invitations
+    Route::prefix('invitations')->name('invitations.')->group(function () {
+        Route::post('teams/{team}', [\App\Http\Controllers\InvitationController::class, 'inviteToTeam'])->name('teams.invite');
+        Route::post('projects/{project}', [\App\Http\Controllers\InvitationController::class, 'inviteToProject'])->name('projects.invite');
+        Route::get('accept/{token}', [\App\Http\Controllers\InvitationController::class, 'accept'])->name('accept');
+        Route::post('reject/{token}', [\App\Http\Controllers\InvitationController::class, 'reject'])->name('reject');
+        Route::delete('{invitation}', [\App\Http\Controllers\InvitationController::class, 'cancel'])->name('cancel');
+    });
 
     // Projects
     Route::resource('projects', ProjectController::class);
@@ -69,6 +97,12 @@ Route::middleware('auth')->group(function () {
         Route::get('attachments/{fileAttachment}', [\App\Http\Controllers\FileAttachmentController::class, 'show'])->name('attachments.show');
         Route::get('attachments/{fileAttachment}/download', [\App\Http\Controllers\FileAttachmentController::class, 'download'])->name('attachments.download');
         Route::delete('attachments/{fileAttachment}', [\App\Http\Controllers\FileAttachmentController::class, 'destroy'])->name('attachments.destroy');
+
+        // Project Members
+        Route::get('members', [\App\Http\Controllers\ProjectController::class, 'members'])->name('members');
+        Route::post('members', [\App\Http\Controllers\ProjectController::class, 'addMember'])->name('members.add');
+        Route::put('members/{user}', [\App\Http\Controllers\ProjectController::class, 'updateMemberRole'])->name('members.update');
+        Route::delete('members/{user}', [\App\Http\Controllers\ProjectController::class, 'removeMember'])->name('members.remove');
     });
 });
 

@@ -17,11 +17,17 @@ class CommentPolicy
      */
     public function viewAny(User $user, $task = null): bool
     {
+        // Super Admin puede ver todo
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         if ($task) {
             return $this->permissionService->hasProjectPermission($user, $task->project, 'comments.view');
         }
 
-        return $this->permissionService->hasGlobalPermission($user, 'comments.view');
+        // Sin tarea específica, cualquier usuario autenticado puede ver comentarios
+        return true;
     }
 
     /**
@@ -47,11 +53,17 @@ class CommentPolicy
      */
     public function create(User $user, $task = null): bool
     {
+        // Super Admin puede crear comentarios
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         if ($task) {
             return $this->permissionService->hasProjectPermission($user, $task->project, 'comments.create');
         }
 
-        return $this->permissionService->hasGlobalPermission($user, 'comments.create');
+        // Sin tarea específica, requiere tarea
+        return false;
     }
 
     /**

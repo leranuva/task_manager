@@ -39,7 +39,40 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
+            'scheme' => (function() {
+                $scheme = env('MAIL_SCHEME');
+                $encryption = env('MAIL_ENCRYPTION');
+                $port = env('MAIL_PORT', 2525);
+                
+                // If MAIL_URL is set, return null to let Laravel parse it
+                if (env('MAIL_URL')) {
+                    return null;
+                }
+                
+                // For port 587, use 'smtp' (not 'smtps') to allow STARTTLS
+                // Port 587 uses STARTTLS (upgrade from plain to TLS)
+                if ($port == 587) {
+                    return 'smtp';
+                }
+                
+                // For port 465, use 'smtps' (SSL direct connection)
+                if ($port == 465) {
+                    return 'smtps';
+                }
+                
+                // Convert legacy TLS to smtp (STARTTLS)
+                if ($scheme === 'tls' || $encryption === 'tls') {
+                    return 'smtp';
+                }
+                
+                // Convert legacy SSL to smtps (direct SSL)
+                if ($scheme === 'ssl' || $encryption === 'ssl') {
+                    return 'smtps';
+                }
+                
+                // Default to smtp for other ports or if scheme is already smtp/smtps
+                return $scheme ?: 'smtp';
+            })(),
             'url' => env('MAIL_URL'),
             'host' => env('MAIL_HOST', '127.0.0.1'),
             'port' => env('MAIL_PORT', 2525),

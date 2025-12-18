@@ -11,9 +11,11 @@ import {
     ArcElement,
     Tooltip,
     Legend,
+    DoughnutController,
 } from 'chart.js';
 
 Chart.register(
+    DoughnutController,
     ArcElement,
     Tooltip,
     Legend

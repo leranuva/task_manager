@@ -53,7 +53,9 @@ class CheckPermission
                 break;
 
             default:
-                $hasPermission = $this->permissionService->hasGlobalPermission($user, $permission);
+                // Para permisos "globales", solo Super Admin tiene acceso
+                // O puedes definir lógica específica aquí
+                $hasPermission = $user->isSuperAdmin();
                 break;
         }
 

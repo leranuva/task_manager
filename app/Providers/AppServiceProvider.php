@@ -33,14 +33,16 @@ class AppServiceProvider extends ServiceProvider
     protected function registerGates(): void
     {
         Gate::define('manage-teams', function ($user) {
-            return app(PermissionService::class)->hasGlobalPermission($user, 'teams.create');
+            // Super Admin o cualquier usuario autenticado puede crear equipos
+            return $user->isSuperAdmin() || true; // Ajusta según tus reglas de negocio
         });
 
         Gate::define('manage-projects', function ($user, $project = null) {
             if ($project) {
                 return app(PermissionService::class)->hasProjectPermission($user, $project, 'projects.update');
             }
-            return app(PermissionService::class)->hasGlobalPermission($user, 'projects.create');
+            // Super Admin o cualquier usuario autenticado puede crear proyectos
+            return $user->isSuperAdmin() || true; // Ajusta según tus reglas de negocio
         });
 
         Gate::define('manage-tasks', function ($user, $project) {

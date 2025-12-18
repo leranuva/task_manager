@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 
 class Team extends Model
@@ -53,5 +54,27 @@ class Team extends Model
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
+    }
+
+    public function invitations(): MorphMany
+    {
+        return $this->morphMany(Invitation::class, 'invitable');
+    }
+
+    // Métodos helper
+    public function hasMember(User $user): bool
+    {
+        return $this->users()->where('users.id', $user->id)->exists() || 
+               $this->owner_id === $user->id;
+    }
+
+    public function getMemberRole(User $user): ?string
+    {
+        if ($this->owner_id === $user->id) {
+            return 'owner';
+        }
+        
+        $member = $this->users()->where('users.id', $user->id)->first();
+        return $member?->pivot->role;
     }
 }

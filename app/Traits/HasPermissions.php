@@ -2,20 +2,58 @@
 
 namespace App\Traits;
 
-use App\Models\Permission;
 use App\Models\Project;
-use App\Models\Role;
 use App\Models\Team;
 use App\Services\PermissionService;
 
 trait HasPermissions
 {
     /**
-     * Verificar si el usuario tiene un permiso global
+     * Verificar si el usuario es Super Admin
+     * Único rol global del sistema
      */
-    public function hasPermission(string $permission): bool
+    public function isSuperAdmin(): bool
     {
-        return app(PermissionService::class)->hasGlobalPermission($this, $permission);
+        return $this->is_super_admin === true;
+    }
+
+    /**
+     * Verificar si el usuario tiene un rol en un equipo
+     */
+    public function hasTeamRole(Team $team, string $role): bool
+    {
+        // Si es owner del equipo, tiene todos los roles
+        if ($team->owner_id === $this->id) {
+            return true;
+        }
+
+        $member = $team->users()->where('users.id', $this->id)->first();
+        return $member?->pivot->role === $role;
+    }
+
+    /**
+     * Verificar si el usuario tiene un rol en un proyecto
+     */
+    public function hasProjectRole(Project $project, string $role): bool
+    {
+        // Si es owner del proyecto, tiene todos los roles
+        if ($project->owner_id === $this->id) {
+            return true;
+        }
+
+        // Verificar rol directo en el proyecto
+        $member = $project->users()->where('users.id', $this->id)->first();
+        if ($member && $member->pivot->role === $role) {
+            return true;
+        }
+
+        // Si es miembro del equipo, hereda acceso (pero no roles específicos)
+        if ($project->team && $project->team->hasMember($this)) {
+            // Los miembros del equipo pueden acceder, pero el rol específico se verifica en el proyecto
+            return false; // El rol específico debe estar en project_user
+        }
+
+        return false;
     }
 
     /**
@@ -35,72 +73,28 @@ trait HasPermissions
     }
 
     /**
-     * Verificar si el usuario tiene un rol global
+     * Obtener el rol del usuario en un equipo
      */
-    public function hasRole(string $roleSlug): bool
+    public function getTeamRole(Team $team): ?string
     {
-        return app(PermissionService::class)->hasGlobalRole($this, $roleSlug);
-    }
-
-    /**
-     * Verificar si el usuario es Super Admin
-     */
-    public function isSuperAdmin(): bool
-    {
-        return $this->hasRole('super-admin');
-    }
-
-    /**
-     * Verificar si el usuario es Admin
-     */
-    public function isAdmin(): bool
-    {
-        return $this->hasRole('admin') || $this->isSuperAdmin();
-    }
-
-    /**
-     * Asignar un rol global al usuario
-     */
-    public function assignGlobalRole(string $roleSlug, $roleable = null): void
-    {
-        $role = Role::where('slug', $roleSlug)->where('scope', 'global')->first();
-        
-        if ($role) {
-            $this->roles()->attach($role->id, [
-                'roleable_type' => $roleable ? get_class($roleable) : null,
-                'roleable_id' => $roleable?->id,
-            ]);
+        if ($team->owner_id === $this->id) {
+            return 'owner';
         }
+
+        $member = $team->users()->where('users.id', $this->id)->first();
+        return $member?->pivot->role;
     }
 
     /**
-     * Asignar un rol de equipo al usuario
+     * Obtener el rol del usuario en un proyecto
      */
-    public function assignTeamRole(Team $team, string $roleSlug): void
+    public function getProjectRole(Project $project): ?string
     {
-        $role = Role::where('slug', $roleSlug)->where('scope', 'team')->first();
-        
-        if ($role) {
-            $this->roles()->attach($role->id, [
-                'roleable_type' => Team::class,
-                'roleable_id' => $team->id,
-            ]);
+        if ($project->owner_id === $this->id) {
+            return 'owner';
         }
-    }
 
-    /**
-     * Asignar un rol de proyecto al usuario
-     */
-    public function assignProjectRole(Project $project, string $roleSlug): void
-    {
-        $role = Role::where('slug', $roleSlug)->where('scope', 'project')->first();
-        
-        if ($role) {
-            $this->roles()->attach($role->id, [
-                'roleable_type' => Project::class,
-                'roleable_id' => $project->id,
-            ]);
-        }
+        $member = $project->users()->where('users.id', $this->id)->first();
+        return $member?->pivot->role;
     }
 }
-

@@ -11,6 +11,9 @@
                 <p class="text-3xl font-bold text-gray-900 dark:text-white">
                     {{ formattedValue }}
                 </p>
+                <p v-if="subtitle" class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {{ subtitle }}
+                </p>
                 <div v-if="change !== null" class="mt-2 flex items-center">
                     <span
                         :class="[
@@ -93,6 +96,10 @@ const props = defineProps({
     format: {
         type: String,
         default: 'number', // 'number', 'percentage', 'currency'
+    },
+    subtitle: {
+        type: String,
+        default: null,
     },
     animation: {
         type: String,

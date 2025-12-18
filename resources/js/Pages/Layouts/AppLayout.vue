@@ -11,6 +11,17 @@
                         </div>
                         <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
                             <Link
+                                :href="route('teams.index')"
+                                :class="[
+                                    $page.url.startsWith('/teams') 
+                                        ? 'border-indigo-500 text-gray-900 dark:text-white' 
+                                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300',
+                                    'inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200'
+                                ]"
+                            >
+                                Equipos
+                            </Link>
+                            <Link
                                 :href="route('projects.index')"
                                 :class="[
                                     $page.url.startsWith('/projects') 
@@ -20,6 +31,30 @@
                                 ]"
                             >
                                 Proyectos
+                            </Link>
+                            <Link
+                                v-if="$page.props.auth.user?.is_super_admin"
+                                :href="route('users.index')"
+                                :class="[
+                                    $page.url.startsWith('/users') 
+                                        ? 'border-purple-500 text-gray-900 dark:text-white' 
+                                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300',
+                                    'inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200'
+                                ]"
+                            >
+                                Usuarios
+                            </Link>
+                            <Link
+                                v-if="$page.props.auth.user?.is_super_admin"
+                                :href="route('admin.dashboard')"
+                                :class="[
+                                    $page.url.startsWith('/admin') 
+                                        ? 'border-red-500 text-gray-900 dark:text-white' 
+                                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300',
+                                    'inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200'
+                                ]"
+                            >
+                                Admin
                             </Link>
                         </div>
                     </div>

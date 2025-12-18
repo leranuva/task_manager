@@ -17,8 +17,15 @@ class ProjectPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $this->permissionService->hasGlobalPermission($user, 'projects.view') ||
-               $user->projects()->exists();
+        // Super Admin puede ver todo
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Cualquier usuario puede ver sus proyectos
+        return $user->projects()->exists() || 
+               $user->ownedProjects()->exists() ||
+               $user->teams()->has('projects')->exists();
     }
 
     /**
@@ -37,16 +44,16 @@ class ProjectPolicy
         }
 
         // Miembro del proyecto puede ver
-        if ($user->projects()->where('projects.id', $project->id)->exists()) {
+        if ($project->hasMember($user)) {
             return true;
         }
 
         // Miembro del equipo puede ver proyectos del equipo
-        if ($user->teams()->where('teams.id', $project->team_id)->exists()) {
+        if ($project->team && $project->team->hasMember($user)) {
             return true;
         }
 
-        return $this->permissionService->hasProjectPermission($user, $project, 'projects.view');
+        return false;
     }
 
     /**
@@ -54,11 +61,18 @@ class ProjectPolicy
      */
     public function create(User $user, $team = null): bool
     {
+        // Super Admin puede crear proyectos
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Si hay un equipo, verificar permisos en el equipo
         if ($team) {
             return $this->permissionService->hasTeamPermission($user, $team, 'projects.create');
         }
 
-        return $this->permissionService->hasGlobalPermission($user, 'projects.create');
+        // Cualquier usuario autenticado puede crear proyectos
+        return true;
     }
 
     /**
@@ -66,18 +80,28 @@ class ProjectPolicy
      */
     public function update(User $user, Project $project): bool
     {
+        // Super Admin puede actualizar todo
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         // Owner puede actualizar
         if ($project->owner_id === $user->id) {
             return true;
         }
 
         // Admin del proyecto puede actualizar
-        $projectRole = $user->projects()->where('projects.id', $project->id)->first()?->pivot->role;
-        if ($projectRole === 'admin' || $projectRole === 'owner') {
+        $projectRole = $user->getProjectRole($project);
+        if ($projectRole === 'admin') {
             return true;
         }
 
-        return $this->permissionService->hasProjectPermission($user, $project, 'projects.update');
+        // Verificar permisos del equipo
+        if ($project->team) {
+            return $this->permissionService->hasTeamPermission($user, $project->team, 'projects.update');
+        }
+
+        return false;
     }
 
     /**
@@ -85,13 +109,13 @@ class ProjectPolicy
      */
     public function delete(User $user, Project $project): bool
     {
-        // Solo el owner puede eliminar
-        if ($project->owner_id === $user->id) {
+        // Super Admin puede eliminar
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        return $this->permissionService->hasGlobalPermission($user, 'projects.delete') &&
-               $user->isSuperAdmin();
+        // Solo el owner puede eliminar
+        return $project->owner_id === $user->id;
     }
 
     /**
@@ -99,12 +123,19 @@ class ProjectPolicy
      */
     public function manageMembers(User $user, Project $project): bool
     {
+        // Super Admin puede gestionar miembros
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         // Owner puede gestionar miembros
         if ($project->owner_id === $user->id) {
             return true;
         }
 
-        return $this->permissionService->hasProjectPermission($user, $project, 'projects.manage_members');
+        // Admin del proyecto puede gestionar miembros
+        $projectRole = $user->getProjectRole($project);
+        return $projectRole === 'admin';
     }
 
     /**
@@ -112,11 +143,40 @@ class ProjectPolicy
      */
     public function manageSettings(User $user, Project $project): bool
     {
-        // Owner puede gestionar configuración
-        if ($project->owner_id === $user->id) {
+        // Super Admin puede gestionar configuración
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        return $this->permissionService->hasProjectPermission($user, $project, 'projects.manage_settings');
+        // Owner puede gestionar configuración
+        return $project->owner_id === $user->id;
+    }
+
+    /**
+     * Determine whether the user can transfer ownership.
+     */
+    public function transferOwnership(User $user, Project $project): bool
+    {
+        // Super Admin puede transferir ownership
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Solo el owner actual puede transferir ownership
+        return $project->owner_id === $user->id;
+    }
+
+    /**
+     * Determine whether the user can archive the project.
+     */
+    public function archive(User $user, Project $project): bool
+    {
+        // Super Admin puede archivar
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Solo el owner puede archivar
+        return $project->owner_id === $user->id;
     }
 }

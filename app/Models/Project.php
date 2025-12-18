@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 
 class Project extends Model
@@ -83,5 +84,37 @@ class Project extends Model
     public function attachments(): MorphMany
     {
         return $this->morphMany(FileAttachment::class, 'attachable');
+    }
+
+    public function invitations(): MorphMany
+    {
+        return $this->morphMany(Invitation::class, 'invitable');
+    }
+
+    // Métodos helper
+    public function hasMember(User $user): bool
+    {
+        return $this->users()->where('users.id', $user->id)->exists() || 
+               $this->owner_id === $user->id ||
+               ($this->team && $this->team->hasMember($user));
+    }
+
+    public function getMemberRole(User $user): ?string
+    {
+        if ($this->owner_id === $user->id) {
+            return 'owner';
+        }
+        
+        $member = $this->users()->where('users.id', $user->id)->first();
+        if ($member) {
+            return $member->pivot->role;
+        }
+        
+        // Si es miembro del equipo, hereda permisos del equipo
+        if ($this->team && $this->team->hasMember($user)) {
+            return $this->team->getMemberRole($user);
+        }
+        
+        return null;
     }
 }

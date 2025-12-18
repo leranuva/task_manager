@@ -17,11 +17,17 @@ class TaskPolicy
      */
     public function viewAny(User $user, $project = null): bool
     {
+        // Super Admin puede ver todo
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         if ($project) {
             return $this->permissionService->hasProjectPermission($user, $project, 'tasks.view');
         }
 
-        return $this->permissionService->hasGlobalPermission($user, 'tasks.view');
+        // Sin proyecto específico, cualquier usuario autenticado puede ver sus tareas
+        return true;
     }
 
     /**
@@ -52,11 +58,17 @@ class TaskPolicy
      */
     public function create(User $user, $project = null): bool
     {
+        // Super Admin puede crear tareas
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         if ($project) {
             return $this->permissionService->hasProjectPermission($user, $project, 'tasks.create');
         }
 
-        return $this->permissionService->hasGlobalPermission($user, 'tasks.create');
+        // Sin proyecto específico, requiere proyecto
+        return false;
     }
 
     /**

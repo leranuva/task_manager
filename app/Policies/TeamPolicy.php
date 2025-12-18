@@ -17,8 +17,13 @@ class TeamPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $this->permissionService->hasGlobalPermission($user, 'teams.view') ||
-               $user->teams()->exists();
+        // Super Admin puede ver todo
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Cualquier usuario puede ver sus equipos
+        return $user->teams()->exists() || $user->ownedTeams()->exists();
     }
 
     /**
@@ -37,11 +42,7 @@ class TeamPolicy
         }
 
         // Miembro del equipo puede ver
-        if ($user->teams()->where('teams.id', $team->id)->exists()) {
-            return true;
-        }
-
-        return $this->permissionService->hasGlobalPermission($user, 'teams.view');
+        return $team->hasMember($user);
     }
 
     /**
@@ -49,7 +50,13 @@ class TeamPolicy
      */
     public function create(User $user): bool
     {
-        return $this->permissionService->hasGlobalPermission($user, 'teams.create');
+        // Super Admin puede crear equipos
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Cualquier usuario autenticado puede crear equipos
+        return true;
     }
 
     /**
@@ -57,18 +64,19 @@ class TeamPolicy
      */
     public function update(User $user, Team $team): bool
     {
+        // Super Admin puede actualizar todo
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         // Owner puede actualizar
         if ($team->owner_id === $user->id) {
             return true;
         }
 
         // Admin del equipo puede actualizar
-        $teamRole = $user->teams()->where('teams.id', $team->id)->first()?->pivot->role;
-        if ($teamRole === 'admin') {
-            return true;
-        }
-
-        return $this->permissionService->hasTeamPermission($user, $team, 'teams.update');
+        $teamRole = $user->getTeamRole($team);
+        return $teamRole === 'admin';
     }
 
     /**
@@ -76,13 +84,13 @@ class TeamPolicy
      */
     public function delete(User $user, Team $team): bool
     {
-        // Solo el owner puede eliminar
-        if ($team->owner_id === $user->id) {
+        // Super Admin puede eliminar
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        return $this->permissionService->hasGlobalPermission($user, 'teams.delete') &&
-               $user->isSuperAdmin();
+        // Solo el owner puede eliminar
+        return $team->owner_id === $user->id;
     }
 
     /**
@@ -90,11 +98,46 @@ class TeamPolicy
      */
     public function manageMembers(User $user, Team $team): bool
     {
+        // Super Admin puede gestionar miembros
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
         // Owner puede gestionar miembros
         if ($team->owner_id === $user->id) {
             return true;
         }
 
-        return $this->permissionService->hasTeamPermission($user, $team, 'teams.manage_members');
+        // Admin del equipo puede gestionar miembros
+        $teamRole = $user->getTeamRole($team);
+        return $teamRole === 'admin';
+    }
+
+    /**
+     * Determine whether the user can transfer ownership.
+     */
+    public function transferOwnership(User $user, Team $team): bool
+    {
+        // Super Admin puede transferir ownership
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Solo el owner actual puede transferir ownership
+        return $team->owner_id === $user->id;
+    }
+
+    /**
+     * Determine whether the user can archive the team.
+     */
+    public function archive(User $user, Team $team): bool
+    {
+        // Super Admin puede archivar
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Solo el owner puede archivar
+        return $team->owner_id === $user->id;
     }
 }

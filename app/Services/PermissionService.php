@@ -2,43 +2,29 @@
 
 namespace App\Services;
 
-use App\Models\Permission;
 use App\Models\Project;
-use App\Models\Role;
 use App\Models\Team;
 use App\Models\User;
 
 class PermissionService
 {
     /**
-     * Verificar si el usuario tiene un permiso global
-     */
-    public function hasGlobalPermission(User $user, string $permission): bool
-    {
-        // Super Admin tiene todos los permisos
-        if ($this->hasGlobalRole($user, 'super-admin')) {
-            return true;
-        }
-
-        return $user->roles()
-            ->where('scope', 'global')
-            ->whereHas('permissions', function ($query) use ($permission) {
-                $query->where('slug', $permission);
-            })
-            ->exists();
-    }
-
-    /**
      * Verificar si el usuario tiene un permiso en un equipo
+     * 
+     * Lógica:
+     * 1. Super Admin → Acceso total
+     * 2. Owner del equipo → Acceso total
+     * 3. Rol en el equipo → Según permisos del rol
+     * 4. Miembro del equipo → Acceso básico
      */
     public function hasTeamPermission(User $user, Team $team, string $permission): bool
     {
-        // Verificar rol global primero
-        if ($this->hasGlobalPermission($user, $permission)) {
+        // Super Admin tiene todos los permisos
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        // Verificar si es owner del equipo
+        // Owner siempre tiene permisos
         if ($team->owner_id === $user->id) {
             return true;
         }
@@ -48,66 +34,63 @@ class PermissionService
             ->where('teams.id', $team->id)
             ->first()?->pivot->role;
 
-        if ($teamRole === 'owner' || $teamRole === 'admin') {
-            return true;
+        // Mapeo de roles a permisos (simplificado)
+        $rolePermissions = [
+            'admin' => ['teams.view', 'teams.update', 'teams.manage_members', 'projects.create', 'projects.view'],
+            'member' => ['teams.view', 'projects.view', 'projects.create'],
+            'viewer' => ['teams.view', 'projects.view'],
+        ];
+
+        if ($teamRole && isset($rolePermissions[$teamRole])) {
+            return in_array($permission, $rolePermissions[$teamRole]);
         }
 
-        // Verificar permisos del rol del equipo
-        return $user->roles()
-            ->where('scope', 'team')
-            ->whereHas('permissions', function ($query) use ($permission) {
-                $query->where('slug', $permission);
-            })
-            ->exists();
+        return false;
     }
 
     /**
      * Verificar si el usuario tiene un permiso en un proyecto
+     * 
+     * Lógica:
+     * 1. Super Admin → Acceso total
+     * 2. Owner del proyecto → Acceso total
+     * 3. Permisos del equipo → Herencia
+     * 4. Rol en el proyecto → Según permisos del rol
      */
     public function hasProjectPermission(User $user, Project $project, string $permission): bool
     {
-        // Verificar permiso global
-        if ($this->hasGlobalPermission($user, $permission)) {
+        // Super Admin tiene todos los permisos
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
-        // Verificar permiso en el equipo
-        if ($this->hasTeamPermission($user, $project->team, $permission)) {
-            return true;
-        }
-
-        // Verificar si es owner del proyecto
+        // Owner siempre tiene permisos
         if ($project->owner_id === $user->id) {
             return true;
         }
 
-        // Verificar rol en el proyecto
+        // Verificar permisos del equipo (herencia)
+        if ($project->team && $this->hasTeamPermission($user, $project->team, $permission)) {
+            return true;
+        }
+
+        // Verificar rol directo en el proyecto
         $projectRole = $user->projects()
             ->where('projects.id', $project->id)
             ->first()?->pivot->role;
 
-        if ($projectRole === 'owner' || $projectRole === 'admin') {
-            return true;
+        // Mapeo de roles a permisos
+        $rolePermissions = [
+            'admin' => ['projects.view', 'projects.update', 'projects.manage_members', 'tasks.create', 'tasks.update', 'tasks.delete'],
+            'editor' => ['projects.view', 'tasks.create', 'tasks.update'],
+            'viewer' => ['projects.view', 'tasks.view'],
+        ];
+
+        if ($projectRole && isset($rolePermissions[$projectRole])) {
+            return in_array($permission, $rolePermissions[$projectRole]);
         }
 
-        // Verificar permisos del rol del proyecto
-        return $user->roles()
-            ->where('scope', 'project')
-            ->whereHas('permissions', function ($query) use ($permission) {
-                $query->where('slug', $permission);
-            })
-            ->exists();
-    }
-
-    /**
-     * Verificar si el usuario tiene un rol global
-     */
-    public function hasGlobalRole(User $user, string $roleSlug): bool
-    {
-        return $user->roles()
-            ->where('scope', 'global')
-            ->where('slug', $roleSlug)
-            ->exists();
+        return false;
     }
 
     /**
@@ -135,4 +118,3 @@ class PermissionService
         return true;
     }
 }
-

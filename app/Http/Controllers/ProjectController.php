@@ -11,6 +11,7 @@ use App\Models\Project;
 use App\Models\ProjectTemplate;
 use App\Models\Team;
 use App\Models\TaskStatus;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
@@ -132,14 +133,12 @@ class ProjectController extends Controller
             $this->createDefaultStatuses($project);
         }
 
-        // Agregar al owner como miembro del proyecto
-        $project->users()->attach($user->id, [
-            'role' => 'owner',
-            'joined_at' => now(),
-        ]);
+        // ⚠️ IMPORTANTE: El owner NO se agrega a project_user
+        // El owner se gestiona exclusivamente mediante projects.owner_id
+        // Solo se almacena en projects.owner_id, no en la tabla pivote
 
-        // Disparar evento de usuario unido
-        broadcast(new UserJoinedProject($project, $user, 'owner'))->toOthers();
+        // Disparar evento de proyecto creado (opcional)
+        // broadcast(new ProjectCreated($project, $user))->toOthers();
 
         return redirect()->route('projects.show', $project)
             ->with('message', 'Proyecto creado exitosamente.');
@@ -348,6 +347,125 @@ class ProjectController extends Controller
             // Si no hay estados en la plantilla, crear los por defecto
             $this->createDefaultStatuses($project);
         }
+    }
+
+    // Gestión de miembros
+    public function members(Request $request, Project $project)
+    {
+        $this->authorize('view', $project);
+
+        $members = $project->users()
+            ->withPivot('role', 'joined_at')
+            ->get()
+            ->map(function ($user) use ($project) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->pivot->role,
+                    'joined_at' => $user->pivot->joined_at,
+                    'is_owner' => $project->owner_id === $user->id,
+                ];
+            });
+
+        // Agregar el owner si no está en la lista
+        if (!$members->contains('id', $project->owner_id)) {
+            $owner = $project->owner;
+            $members->prepend([
+                'id' => $owner->id,
+                'name' => $owner->name,
+                'email' => $owner->email,
+                'role' => 'owner',
+                'joined_at' => $project->created_at,
+                'is_owner' => true,
+            ]);
+        }
+
+        // Si el proyecto tiene equipo, agregar miembros del equipo que no estén en el proyecto
+        if ($project->team) {
+            $teamMembers = $project->team->users()
+                ->whereNotIn('users.id', $members->pluck('id'))
+                ->where('users.id', '!=', $project->owner_id)
+                ->withPivot('role')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->pivot->role . ' (heredado del equipo)',
+                        'joined_at' => $user->pivot->joined_at,
+                        'is_owner' => false,
+                        'is_from_team' => true,
+                    ];
+                });
+            
+            $members = $members->merge($teamMembers);
+        }
+
+        return response()->json($members->values());
+    }
+
+    public function addMember(Request $request, Project $project)
+    {
+        $this->authorize('manageMembers', $project);
+
+        $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'role' => ['required', 'string', 'in:admin,editor,viewer'],
+        ]);
+
+        // ⚠️ IMPORTANTE: El owner NO se almacena en project_user
+        // El owner se gestiona exclusivamente mediante projects.owner_id
+        if ($request->user_id === $project->owner_id) {
+            return back()->withErrors(['user_id' => 'El propietario del proyecto no se agrega como miembro. El owner se gestiona mediante owner_id.']);
+        }
+
+        // Verificar que el usuario no esté ya en el proyecto
+        if ($project->users()->where('users.id', $request->user_id)->exists()) {
+            return back()->withErrors(['user_id' => 'El usuario ya es miembro del proyecto.']);
+        }
+
+        $project->users()->attach($request->user_id, [
+            'role' => $request->role,
+            'joined_at' => now(),
+        ]);
+
+        return back()->with('message', 'Miembro agregado exitosamente.');
+    }
+
+    public function updateMemberRole(Request $request, Project $project, User $user)
+    {
+        $this->authorize('manageMembers', $project);
+
+        // No permitir cambiar el rol del owner
+        if ($project->owner_id === $user->id) {
+            return back()->withErrors(['role' => 'No se puede cambiar el rol del propietario del proyecto.']);
+        }
+
+        $request->validate([
+            'role' => ['required', 'string', 'in:admin,editor,viewer'],
+        ]);
+
+        $project->users()->updateExistingPivot($user->id, [
+            'role' => $request->role,
+        ]);
+
+        return back()->with('message', 'Rol actualizado exitosamente.');
+    }
+
+    public function removeMember(Project $project, User $user)
+    {
+        $this->authorize('manageMembers', $project);
+
+        // No permitir eliminar al owner
+        if ($project->owner_id === $user->id) {
+            return back()->withErrors(['user' => 'No se puede eliminar al propietario del proyecto.']);
+        }
+
+        $project->users()->detach($user->id);
+
+        return back()->with('message', 'Miembro eliminado exitosamente.');
     }
 
     /**
